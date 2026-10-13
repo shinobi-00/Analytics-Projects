@@ -10,6 +10,7 @@ Run the stages below **in order**, showing the user the output of each stage bef
 **Hard rules (apply to every stage)**
 - Never invent employers, titles, dates, degrees, tools, or numbers. If a metric or skill is missing, ask the user. If they can't supply one, use a truthful non-numeric measure and list it under "Please confirm" at the end.
 - Never edit the user's original uploads. Work on copies.
+- Everything written into the resume or cover letter must read as human-written: run it through the humanizer skill (see Stage 4b) before it goes into a file, including text added later during ATS fixes.
 - The resume DOCX and PDF must always contain identical text; regenerate the PDF from the DOCX every time the DOCX changes.
 - File names follow `<Full Name>_<Company Name>_<Job Title>` for both .docx and .pdf:
   - Resume: `<Full Name>_<Company Name>_<Job Title>.docx` / `.pdf`
@@ -102,13 +103,15 @@ Wait for answers. If the user says "use your judgment" or doesn't know a number,
 
 ## Stage 4 - Generate the resume (DOCX + PDF) and cover letter
 
+Order: write the full resume text and cover letter text first, humanize both (Stage 4b), then build the DOCX and PDF files from the humanized text.
+
 If a `docx` skill is available, read its SKILL.md first. Otherwise build with python-docx (`pip install python-docx`). Build ATS-safe from the start:
 
 - One column. No tables, text boxes, columns, images, icons, skill bars or graphics.
 - Name on line 1; email | phone | city | LinkedIn URL on line 2, in the **body** (never in the header/footer).
 - Headings exactly: Summary, Skills, Experience, Education, Certifications, Projects (only those that apply).
 - One font throughout (Calibri or Arial): body 10.5-11pt, headings 12pt bold, name 16-18pt. Margins 0.5-1 in.
-- Each role: `Job Title, Company - City` on one line and `Mon YYYY – Mon YYYY` (or "Present"); one date format everywhere.
+- Each role: `Job Title, Company - City` on one line and `Mon YYYY - Mon YYYY` (or "Present") with a plain hyphen, not an en or em dash; one date format everywhere.
 - Bullets: Word list bullets or a plain "•" only.
 - Length: 1 page if under ~8 years of experience, otherwise max 2.
 
@@ -121,7 +124,18 @@ Convert to PDF from the DOCX: `soffice --headless --convert-to pdf <Full Name>_<
 4. Close - confident, with a call to an interview.
 No tables, no header/footer, plain paragraphs.
 
-Send all four files to the user.
+## Stage 4b - Humanize before the ATS check
+
+Before any ATS check, and every time text is added or changed later, make the resume and cover letter read like the candidate wrote them, not AI.
+
+1. Invoke the humanizer skill with the Skill tool. Its name depends on the app: `humanizer:humanizer` in Claude Code, `8522bbee-a491-445e-9400-615770e76ef5:humanizer` in claude.ai. Use whichever appears in the available skills list. Run it in embedded mode (return only the final text) on:
+   - the Summary, every Experience bullet, Projects text and any other prose in the resume
+   - the whole cover letter
+2. Tell it to protect these, unchanged: every JD keyword in `keywords.txt` and other JD terms used on purpose (exact spelling and casing), all numbers and metrics, names, employers, job titles, dates, tools, certifications, URLs, section headings, and the X/Y/Z content of each bullet. If the user gave a writing sample (e.g. their original cover letter), pass it as the voice sample.
+3. Check the result: no em or en dashes, no "not X but Y", no stock AI words (e.g. leverage, spearheaded, robust, pivotal, showcase, delve, testament, seamless) unless the JD itself uses that word, no forced triads, no inflated claims, varied bullet openings and lengths. Confirm every keyword in `keywords.txt` is still present and no fact was added or dropped.
+4. If the humanizer skill isn't installed, apply step 3 yourself.
+
+Then build the DOCX and PDF files from the humanized text and send all four files to the user.
 
 ## Stage 5 - ATS compatibility loop
 
@@ -142,7 +156,7 @@ Report each pass as:
 | # | Issue | Section | Why a bot struggles | Fix |
 |---|---|---|---|---|
 
-Then **fix every issue** in the resume DOCX, regenerate the resume PDF, apply the same fixes to the cover letter DOCX/PDF, and run the same prompt again as pass N+1.
+Then **fix every issue** in the resume DOCX (any new or reworded text goes through Stage 4b first), regenerate the resume PDF, apply the same fixes to the cover letter DOCX/PDF, and run the same prompt again as pass N+1.
 
 - Stop as soon as a pass finds **0 issues** - if pass 1 is already clean, say so and move on.
 - Safety cap: stop after 5 passes. Anything still open at that point needs a decision from the user (e.g. a keyword they don't have); list it and ask.
@@ -207,6 +221,8 @@ def check_pdf(path, keywords):
         add("Email not found near the top of parsed text", "Contact", "Candidate record created without email", "Put email in the first lines of the body")
     if not re.search(r"\+?\d[\d\s().-]{8,}\d", top):
         add("Phone not found near the top of parsed text", "Contact", "Recruiter can't call from the ATS record", "Put phone in the first lines of the body")
+    if re.search("[\u2013\u2014]", txt):
+        add("Em/en dashes in text", "Body", "Some parsers mangle them, and they read as AI-written", "Use a plain hyphen in date ranges and rewrite other dashes (Stage 4b)")
     if ODD_CHARS.search(txt):
         add("Junk characters in parsed PDF text", "Body", "Garbled keywords fail matching", "Remove symbols/ligatures; use standard fonts")
     styles = set()
@@ -215,7 +231,7 @@ def check_pdf(path, keywords):
         if re.search(pat, txt):
             styles.add(label)
     if len(styles) > 1:
-        add(f"Mixed date formats: {sorted(styles)}", "Experience", "Tenure calculation can fail", "Use one format everywhere, e.g. 'Jan 2022 – Mar 2024'")
+        add(f"Mixed date formats: {sorted(styles)}", "Experience", "Tenure calculation can fail", "Use one format everywhere, e.g. 'Jan 2022 - Mar 2024'")
     missing = [k for k in keywords if k and k.lower() not in txt.lower()]
     if missing:
         add(f"JD keywords absent from parsed text: {missing}", "Keywords", "Keyword-match score drops", "Add each where it is truthful (Skills + one Experience bullet)")
@@ -245,6 +261,8 @@ For each question:
 - *What the hiring manager is really testing*
 - **Perfect answer** (first person, 150-250 words, built only from the user's real experience in the resume; use STAR for experience-based questions and show reasoning for problem-solving ones)
 - *Likely follow-up* and one line on how to handle it
+
+Run the three answers through the humanizer skill as well (same protections as Stage 4b) so they sound like the candidate speaking.
 
 ## Close
 
