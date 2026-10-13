@@ -11,7 +11,11 @@ Run the stages below **in order**, showing the user the output of each stage bef
 - Never invent employers, titles, dates, degrees, tools, or numbers. If a metric or skill is missing, ask the user. If they can't supply one, use a truthful non-numeric measure and list it under "Please confirm" at the end.
 - Never edit the user's original uploads. Work on copies.
 - The resume DOCX and PDF must always contain identical text; regenerate the PDF from the DOCX every time the DOCX changes.
-- File names: `Firstname_Lastname_Resume_Company.docx/.pdf` and `Firstname_Lastname_CoverLetter_Company.docx/.pdf`.
+- File names follow `<Full Name>_<Company Name>_<Job Title>` for both .docx and .pdf:
+  - Resume: `<Full Name>_<Company Name>_<Job Title>.docx` / `.pdf`
+  - Cover letter: `<Full Name>_<Company Name>_<Job Title>_Cover_Letter.docx` / `.pdf` (the suffix stops it overwriting the resume)
+  - Take the full name from the resume, and the company and exact job title from the job description. Replace spaces with underscores and drop characters that break file names (`/ \ : * ? " < > | , &`). Example: `Vishal_Raj_Google_Senior_Data_Analyst.pdf`.
+  - Use this naming for every version you save or send, including after each ATS fix.
 
 ---
 
@@ -108,7 +112,7 @@ If a `docx` skill is available, read its SKILL.md first. Otherwise build with py
 - Bullets: Word list bullets or a plain "•" only.
 - Length: 1 page if under ~8 years of experience, otherwise max 2.
 
-Convert to PDF from the DOCX: `soffice --headless --convert-to pdf Firstname_Lastname_Resume_Company.docx` (or `docx2pdf` if LibreOffice isn't installed). Render page 1 of the PDF to an image and look at it to catch layout problems.
+Convert to PDF from the DOCX: `soffice --headless --convert-to pdf <Full Name>_<Company Name>_<Job Title>.docx` (or `docx2pdf` if LibreOffice isn't installed). Render page 1 of the PDF to an image and look at it to catch layout problems.
 
 **Cover letter** (DOCX + PDF, same font and contact block as the resume): 250-400 words, addressed to the hiring manager by name if known, otherwise "Dear Hiring Manager".
 1. Opening - the exact role title and company, and one specific reason this role fits (from the JD / URL, not generic).
@@ -127,7 +131,7 @@ Take the latest resume (DOCX + PDF) and cover letter as input and run:
 
 Do this as a **real scan**, not an opinion:
 1. Save the script below as `ats_check.py` and run it on the resume and on the cover letter:
-   `python3 ats_check.py Resume.docx Resume.pdf keywords.txt` and `python3 ats_check.py CoverLetter.docx CoverLetter.pdf`
+   `python3 ats_check.py <resume>.docx <resume>.pdf keywords.txt` and `python3 ats_check.py <cover letter>.docx <cover letter>.pdf`
 2. Read the parsed text (`pdftotext Resume.pdf -`) yourself as a bot would: is the reading order right, are sections recognisable, does each job show title, company and dates together, are the keywords spelled as in the JD?
 3. Apply the common rules of the major ATS families - Workday, Taleo (Oracle), iCIMS, Greenhouse, Lever, SuccessFactors, SmartRecruiters - (tables, headers/footers, columns, graphics, odd headings, mixed dates, symbols, file type and name).
 
